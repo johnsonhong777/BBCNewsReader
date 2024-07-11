@@ -4,7 +4,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.MenuItem;
-import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -19,6 +19,7 @@ public class NewsDetailActivity extends AppCompatActivity {
 
     private DatabaseHelper databaseHelper;
     private NewsItem newsItem;
+    private ImageButton saveButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,7 +36,14 @@ public class NewsDetailActivity extends AppCompatActivity {
         databaseHelper = new DatabaseHelper(this);
 
         Intent intent = getIntent();
-        newsItem = (NewsItem) intent.getSerializableExtra("newsItem");
+        newsItem = intent.getParcelableExtra("newsItem");
+
+        if (newsItem != null) {
+            NewsItem storedItem = databaseHelper.getNewsItemByLink(newsItem.getLink());
+            if (storedItem != null) {
+                newsItem = storedItem; // Update the newsItem with the stored favorite status
+            }
+        }
 
         TextView titleTextView = findViewById(R.id.news_detail_title);
         TextView descriptionTextView = findViewById(R.id.news_detail_description);
@@ -49,16 +57,28 @@ public class NewsDetailActivity extends AppCompatActivity {
             linkTextView.setText(newsItem.getLink());
         }
 
-        Button saveButton = findViewById(R.id.save_button);
-        saveButton.setOnClickListener(v -> saveToFavorites());
+        saveButton = findViewById(R.id.favorite_button);
+        updateSaveButtonIcon();
 
-        Button viewArticleButton = findViewById(R.id.view_article_button);
-        viewArticleButton.setOnClickListener(v -> {
+        saveButton.setOnClickListener(v -> {
+            newsItem.setFavorite(!newsItem.isFavorite());
+            databaseHelper.insertOrUpdateFavorite(newsItem);
+
+            if (newsItem.isFavorite()) {
+                Toast.makeText(this, getString(R.string.save_to_favorites), Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, getString(R.string.remove_from_favorites), Toast.LENGTH_SHORT).show();
+            }
+
+            updateSaveButtonIcon();
+        });
+
+        findViewById(R.id.view_article_button).setOnClickListener(v -> {
             if (newsItem != null && newsItem.getLink() != null && !newsItem.getLink().isEmpty()) {
                 Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(newsItem.getLink()));
                 startActivity(browserIntent);
             } else {
-                Toast.makeText(NewsDetailActivity.this, "No link available", Toast.LENGTH_SHORT).show();
+                Toast.makeText(NewsDetailActivity.this, getString(R.string.no_link_available), Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -74,12 +94,11 @@ public class NewsDetailActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, callback);
     }
 
-    private void saveToFavorites() {
-        boolean isInserted = databaseHelper.insertFavorite(newsItem);
-        if (isInserted) {
-            Toast.makeText(this, "Saved to favorites", Toast.LENGTH_SHORT).show();
+    private void updateSaveButtonIcon() {
+        if (newsItem.isFavorite()) {
+            saveButton.setImageResource(R.drawable.ic_favorite);
         } else {
-            Toast.makeText(this, "Already in favorites", Toast.LENGTH_SHORT).show();
+            saveButton.setImageResource(R.drawable.ic_favorite_border);
         }
     }
 

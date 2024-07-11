@@ -1,6 +1,7 @@
 package com.androids.bbcnewsreader;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -25,6 +26,7 @@ import org.xmlpull.v1.XmlPullParserFactory;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -41,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        loadLocale();
         setContentView(R.layout.activity_main);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
@@ -62,7 +65,6 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
 
-
         progressBar = findViewById(R.id.progress_bar);
         newsListView = findViewById(R.id.news_list_view);
         newsList = new ArrayList<>();
@@ -70,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(MainActivity.this, NewsDetailActivity.class);
             intent.putExtra("newsItem", newsItem);
             startActivity(intent);
-        });
+        }, false);
         newsListView.setAdapter(newsAdapter);
 
         executorService = Executors.newSingleThreadExecutor();
@@ -127,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
                 switch (eventType) {
                     case XmlPullParser.START_TAG:
                         if (tagName.equals("item")) {
-                            currentItem = new NewsItem("", "", "", "");
+                            currentItem = new NewsItem(0, "", "", "", "", false); // Initialize with default ID 0
                         }
                         break;
                     case XmlPullParser.TEXT:
@@ -172,7 +174,16 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == R.id.action_help) {
+        int id = item.getItemId();
+        if (id == R.id.nav_favorites) {
+            Intent intent = new Intent(this, FavoriteNewsActivity.class);
+            startActivity(intent);
+            return true;
+        } else if (id == R.id.nav_settings) {
+            Intent intent = new Intent(this, SettingsActivity.class);
+            startActivity(intent);
+            return true;
+        } else if (id == R.id.action_help) {
             showHelpDialog();
             return true;
         }
@@ -181,11 +192,26 @@ public class MainActivity extends AppCompatActivity {
 
     private void showHelpDialog() {
         new AlertDialog.Builder(this)
-                .setTitle("Help")
+                .setTitle(getString(R.string.action_help))
                 .setMessage(getString(R.string.help_message))
                 .setPositiveButton(android.R.string.ok, null)
                 .show();
     }
+
+    private void loadLocale() {
+        SharedPreferences sharedPreferences = getSharedPreferences("Settings", MODE_PRIVATE);
+        String language = sharedPreferences.getString("My_Lang", "en");
+        setLocale(language);
+    }
+
+    private void setLocale(String lang) {
+        Locale locale = new Locale(lang);
+        Locale.setDefault(locale);
+        android.content.res.Configuration config = new android.content.res.Configuration();
+        config.setLocale(locale);
+        getResources().updateConfiguration(config, getResources().getDisplayMetrics());
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();

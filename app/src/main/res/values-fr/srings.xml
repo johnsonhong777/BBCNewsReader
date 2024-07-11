@@ -3,5 +3,18 @@
     <string name="nav_favorites">Favoris</string>
     <string name="nav_settings">Paramètres</string>
     <string name="action_help">Aide</string>
+    <string name="favorite_button">Favori</string>
+    <string name="save_to_favorites">Ajouté aux favoris</string>
+    <string name="remove_from_favorites">Retiré des favoris</string>
+    <string name="error_saving_to_favorites">Erreur lors de l\'ajout aux favoris</string>
+    <string name="no_link_available">Aucun lien disponible</string>
+    <string name="view_article">Voir l\'article</string>
+    <string name="language_saved">Préférence de langue enregistrée</string>
+    <string name="english">Anglais</string>
+    <string name="french">Français</string>
+    <string name="save">Enregistrer</string>
+    <string name="select_language">Choisir la langue</string>
+    <string name="confirm">Confirmer</string>
+
     <string name="help_message">Ceci est une application de lecteur de nouvelles. Vous pouvez consulter des articles de nouvelles et les enregistrer dans vos favoris.</string>
 </resources>

@@ -20,5 +20,4 @@
         android:textColor="@android:color/white"
         android:textSize="20sp"
         android:paddingTop="8dp" />
-
 </LinearLayout>
