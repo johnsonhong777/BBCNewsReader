@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Lecteur de nouvelles BBC</string>
+    <string name="nav_favorites">Favoris</string>
+    <string name="nav_settings">Paramètres</string>
+    <string name="action_help">Aide</string>
+    <string name="help_message">Ceci est une application de lecteur de nouvelles. Vous pouvez consulter des articles de nouvelles et les enregistrer dans vos favoris.</string>
+</resources>

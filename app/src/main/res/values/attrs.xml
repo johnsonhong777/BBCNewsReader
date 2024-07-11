@@ -1,0 +1,4 @@
+<resources>
+    <attr name="colorPrimary" format="reference|color"/>
+    <attr name="actionBarTheme" format="reference"/>
+</resources>
