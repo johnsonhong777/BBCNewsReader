@@ -17,6 +17,10 @@ import com.androids.bbcnewsreader.util.DatabaseHelper;
 
 import java.util.List;
 
+
+/**
+ * Activity that displays a list of favorite news articles and allows users to view details or delete articles.
+ */
 public class FavoriteNewsActivity extends AppCompatActivity {
     private ListView favoriteListView;
     private NewsAdapter adapter;
@@ -40,7 +44,9 @@ public class FavoriteNewsActivity extends AppCompatActivity {
             Intent intent = new Intent(FavoriteNewsActivity.this, NewsDetailActivity.class);
             intent.putExtra("newsItem", newsItem);
             startActivity(intent);
-        }, true);
+        }, true, findViewById(R.id.main_layout));
+
+
         favoriteListView.setAdapter(adapter);
 
         favoriteListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -71,5 +77,3 @@ public class FavoriteNewsActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 }
-
-

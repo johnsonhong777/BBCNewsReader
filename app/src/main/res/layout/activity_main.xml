@@ -15,8 +15,27 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="?attr/colorPrimary"
-            app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
-            app:title="@string/app_name" />
+            app:popupTheme="@style/ThemeOverlay.AppCompat.Light">
+
+            <TextView
+                android:id="@+id/toolbar_version"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/version_number"
+                android:textColor="@android:color/black"
+                android:textSize="12sp"
+                android:layout_gravity="end|center_vertical"
+                android:paddingEnd="16dp"/>
+        </androidx.appcompat.widget.Toolbar>
+
+        <!-- Add the EditText here -->
+        <EditText
+            android:id="@+id/search_edit_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Search..."
+            android:inputType="text"
+            android:padding="8dp" />
 
         <ProgressBar
             android:id="@+id/progress_bar"

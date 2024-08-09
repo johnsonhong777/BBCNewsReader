@@ -12,6 +12,19 @@ import com.androids.bbcnewsreader.model.NewsItem;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Helper class for managing the database and performing CRUD operations on news items.
+ */
 public class DatabaseHelper extends SQLiteOpenHelper {
     private static final int DATABASE_VERSION = 2;
     private static final String DATABASE_NAME = "news.db";
@@ -24,6 +37,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String COLUMN_LINK = "link";
     private static final String COLUMN_FAVORITE = "favorite";
 
+    /**
+     * Constructor for DatabaseHelper.
+     *
+     * @param context The context in which the database is operating.
+     */
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
@@ -48,6 +66,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
+    /**
+     * Retrieves all favorite news items from the database.
+     *
+     * @return A list of favorite news items.
+     */
     public List<NewsItem> getAllFavoriteNews() {
         List<NewsItem> favoriteNews = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
@@ -73,6 +96,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                                 cursor.getInt(favoriteIndex) == 1
                         );
                         favoriteNews.add(newsItem);
+                    } else {
+                        Log.e("DatabaseHelper", "Column not found");
                     }
                 } while (cursor.moveToNext());
             }
@@ -81,6 +106,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return favoriteNews;
     }
 
+    /**
+     * Inserts or updates a news item in the database.
+     *
+     * @param newsItem The news item to be inserted or updated.
+     * @return True if the operation was successful, otherwise false.
+     */
     public boolean insertOrUpdateFavorite(NewsItem newsItem) {
         SQLiteDatabase db = this.getWritableDatabase();
 
@@ -93,24 +124,25 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_LINK, newsItem.getLink());
         values.put(COLUMN_FAVORITE, newsItem.isFavorite() ? 1 : 0);
 
+        boolean isSuccess;
         if (cursor != null && cursor.moveToFirst()) {
             // Update existing record
-            db.update(TABLE_NEWS, values, COLUMN_LINK + " = ?", new String[]{newsItem.getLink()});
+            isSuccess = db.update(TABLE_NEWS, values, COLUMN_LINK + " = ?", new String[]{newsItem.getLink()}) > 0;
             cursor.close();
         } else {
             // Insert new record
-            db.insert(TABLE_NEWS, null, values);
+            isSuccess = db.insert(TABLE_NEWS, null, values) != -1;
         }
-        return true;
+        return isSuccess;
     }
 
-    public void saveFavoriteStatus(int newsId, boolean isFavorite) {
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put(COLUMN_FAVORITE, isFavorite ? 1 : 0);
-        db.update(TABLE_NEWS, values, COLUMN_ID + " = ?", new String[]{String.valueOf(newsId)});
-    }
 
+
+    /**
+     * Deletes a news item from the favorites.
+     *
+     * @param newsId The ID of the news item to be deleted from favorites.
+     */
     public void deleteFavoriteNews(int newsId) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
@@ -118,45 +150,42 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.update(TABLE_NEWS, values, COLUMN_ID + " = ?", new String[]{String.valueOf(newsId)});
     }
 
-    public void cleanUpDuplicates() {
-        SQLiteDatabase db = this.getWritableDatabase();
-
-        // Query to find duplicates based on the unique link
-        String query = "SELECT " + COLUMN_ID + ", " + COLUMN_LINK + " FROM " + TABLE_NEWS
-                + " GROUP BY " + COLUMN_LINK + " HAVING COUNT(" + COLUMN_LINK + ") > 1";
-
-        Cursor cursor = db.rawQuery(query, null);
-        if (cursor != null && cursor.moveToFirst()) {
-            do {
-                String link = cursor.getString(cursor.getColumnIndex(COLUMN_LINK));
-
-                // Delete duplicates, keeping only the first entry
-                String deleteQuery = "DELETE FROM " + TABLE_NEWS + " WHERE " + COLUMN_ID
-                        + " NOT IN (SELECT MIN(" + COLUMN_ID + ") FROM " + TABLE_NEWS
-                        + " WHERE " + COLUMN_LINK + " = ?)";
-                db.execSQL(deleteQuery, new String[]{link});
-            } while (cursor.moveToNext());
-        }
-        if (cursor != null) {
-            cursor.close();
-        }
-    }
-
+    /**
+     * Retrieves a news item from the database based on its link.
+     *
+     * @param link The link of the news item.
+     * @return The news item if found, otherwise null.
+     */
     public NewsItem getNewsItemByLink(String link) {
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.query(TABLE_NEWS, null, COLUMN_LINK + " = ?", new String[]{link}, null, null, null);
 
         if (cursor != null && cursor.moveToFirst()) {
-            NewsItem newsItem = new NewsItem(
-                    cursor.getInt(cursor.getColumnIndex(COLUMN_ID)),
-                    cursor.getString(cursor.getColumnIndex(COLUMN_TITLE)),
-                    cursor.getString(cursor.getColumnIndex(COLUMN_DESCRIPTION)),
-                    cursor.getString(cursor.getColumnIndex(COLUMN_DATE)),
-                    cursor.getString(cursor.getColumnIndex(COLUMN_LINK)),
-                    cursor.getInt(cursor.getColumnIndex(COLUMN_FAVORITE)) == 1
-            );
+            int idIndex = cursor.getColumnIndex(COLUMN_ID);
+            int titleIndex = cursor.getColumnIndex(COLUMN_TITLE);
+            int descriptionIndex = cursor.getColumnIndex(COLUMN_DESCRIPTION);
+            int dateIndex = cursor.getColumnIndex(COLUMN_DATE);
+            int linkIndex = cursor.getColumnIndex(COLUMN_LINK);
+            int favoriteIndex = cursor.getColumnIndex(COLUMN_FAVORITE);
+
+            if (idIndex >= 0 && titleIndex >= 0 && descriptionIndex >= 0 && dateIndex >= 0 && linkIndex >= 0 && favoriteIndex >= 0) {
+                NewsItem newsItem = new NewsItem(
+                        cursor.getInt(idIndex),
+                        cursor.getString(titleIndex),
+                        cursor.getString(descriptionIndex),
+                        cursor.getString(dateIndex),
+                        cursor.getString(linkIndex),
+                        cursor.getInt(favoriteIndex) == 1
+                );
+                cursor.close();
+                return newsItem;
+            } else {
+                Log.e("DatabaseHelper", "Column not found");
+            }
+        }
+
+        if (cursor != null) {
             cursor.close();
-            return newsItem;
         }
         return null;
     }

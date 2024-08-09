@@ -1,21 +1,21 @@
 package com.androids.bbcnewsreader;
-
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import java.util.Locale;
 
+/**
+ * Activity for managing application settings, including language selection.
+ */
 public class SettingsActivity extends AppCompatActivity {
-    private static final String TAG = "SettingsActivity";
     private String selectedLanguage;
 
     @Override
@@ -61,7 +61,7 @@ public class SettingsActivity extends AppCompatActivity {
     private void setLocale(String lang) {
         Locale locale = new Locale(lang);
         Locale.setDefault(locale);
-        android.content.res.Configuration config = new android.content.res.Configuration();
+        Configuration config = new Configuration();
         config.setLocale(locale);
         getResources().updateConfiguration(config, getResources().getDisplayMetrics());
 
@@ -70,7 +70,7 @@ public class SettingsActivity extends AppCompatActivity {
         editor.apply();
 
         // Restart the MainActivity to apply the language change
-        Intent intent = new Intent(SettingsActivity.this, MainActivity.class);
+        Intent intent = new Intent(getApplicationContext(), MainActivity.class);  // Use getApplicationContext()
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();

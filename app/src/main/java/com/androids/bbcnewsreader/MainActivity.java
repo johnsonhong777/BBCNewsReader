@@ -6,12 +6,16 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.androids.bbcnewsreader.adapter.NewsAdapter;
@@ -22,35 +26,44 @@ import com.google.android.material.snackbar.Snackbar;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserFactory;
+import android.os.AsyncTask;
 
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
+/**
+ * Main activity that displays a list of news articles, handles navigation, and manages fetching and parsing news data.
+ */
 public class MainActivity extends AppCompatActivity {
-
     private static final String TAG = "MainActivity";
     private ListView newsListView;
     private List<NewsItem> newsList;
     private NewsAdapter newsAdapter;
     private ProgressBar progressBar;
-    private ExecutorService executorService;
+    private NavigationView navigationView;
+    private EditText searchEditText;
+    private View mainLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        loadLocale();
+        loadLocale();  // Load the saved locale
         setContentView(R.layout.activity_main);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        // Set the toolbar title based on the current locale
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle(getString(R.string.app_name));
+        }
+
         DrawerLayout drawerLayout = findViewById(R.id.drawer_layout);
-        NavigationView navigationView = findViewById(R.id.nav_view);
+        navigationView = findViewById(R.id.nav_view);
+        mainLayout = findViewById(R.id.main_layout); // Initialize the main layout
+
         navigationView.setNavigationItemSelectedListener(item -> {
             int id = item.getItemId();
             Log.d(TAG, "Navigation item selected: " + id);
@@ -61,27 +74,51 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "Navigating to SettingsActivity");
                 startActivity(new Intent(MainActivity.this, SettingsActivity.class));
             }
-            drawerLayout.closeDrawers();
+            drawerLayout.closeDrawer(GravityCompat.START);
             return true;
         });
 
+        updateNavigationViewMenu();
+
         progressBar = findViewById(R.id.progress_bar);
         newsListView = findViewById(R.id.news_list_view);
+        searchEditText = findViewById(R.id.search_edit_text);  // Initialize the EditText
+
+        // Set up an action when the user enters text in the search EditText and presses Enter
+        searchEditText.setOnEditorActionListener((v, actionId, event) -> {
+            String searchText = searchEditText.getText().toString();
+            if (!searchText.isEmpty()) {
+                Toast.makeText(MainActivity.this, "Searching for: " + searchText, Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(MainActivity.this, "Showing all items", Toast.LENGTH_SHORT).show();
+            }
+            newsAdapter.filter(searchText);  // Filter the list based on the search query
+            return true;
+        });
+
         newsList = new ArrayList<>();
         newsAdapter = new NewsAdapter(this, newsList, newsItem -> {
             Intent intent = new Intent(MainActivity.this, NewsDetailActivity.class);
             intent.putExtra("newsItem", newsItem);
             startActivity(intent);
-        }, false);
+        }, false, mainLayout); // Pass the main layout to the adapter
+
         newsListView.setAdapter(newsAdapter);
 
-        executorService = Executors.newSingleThreadExecutor();
-        fetchNews();
+        // Fetch news using AsyncTask
+        new FetchNewsTask().execute();
     }
 
-    private void fetchNews() {
-        progressBar.setVisibility(android.view.View.VISIBLE);
-        Future<List<NewsItem>> future = executorService.submit(() -> {
+    private class FetchNewsTask extends AsyncTask<Void, Void, List<NewsItem>> {
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            progressBar.setVisibility(View.VISIBLE); // Show progress bar before starting the task
+        }
+
+        @Override
+        protected List<NewsItem> doInBackground(Void... voids) {
             try {
                 String response = NetworkUtils.getResponseFromHttpUrl();
                 Log.d(TAG, "Network response: " + response);
@@ -90,27 +127,22 @@ public class MainActivity extends AppCompatActivity {
                 Log.e(TAG, "Error fetching news", e);
                 return null;
             }
-        });
+        }
 
-        executorService.execute(() -> {
-            try {
-                List<NewsItem> newsItems = future.get();
-                runOnUiThread(() -> {
-                    progressBar.setVisibility(android.view.View.GONE);
-                    if (newsItems != null) {
-                        Log.d(TAG, "News items fetched: " + newsItems.size());
-                        newsList.clear();
-                        newsList.addAll(newsItems);
-                        newsAdapter.notifyDataSetChanged();
-                    } else {
-                        Log.e(TAG, "No news items fetched");
-                        Snackbar.make(findViewById(R.id.main_layout), "Failed to fetch news", Snackbar.LENGTH_LONG).show();
-                    }
-                });
-            } catch (Exception e) {
-                Log.e(TAG, "Error processing news items", e);
+        @Override
+        protected void onPostExecute(List<NewsItem> newsItems) {
+            super.onPostExecute(newsItems);
+            progressBar.setVisibility(View.GONE); // Hide progress bar after task completion
+            if (newsItems != null) {
+                Log.d(TAG, "News items fetched: " + newsItems.size());
+                newsList.clear();
+                newsList.addAll(newsItems);
+                newsAdapter.notifyDataSetChanged();
+            } else {
+                Log.e(TAG, "No news items fetched");
+                Snackbar.make(mainLayout, "Failed to fetch news", Snackbar.LENGTH_LONG).show();
             }
-        });
+        }
     }
 
     private List<NewsItem> parseXml(String xml) {
@@ -210,6 +242,19 @@ public class MainActivity extends AppCompatActivity {
         android.content.res.Configuration config = new android.content.res.Configuration();
         config.setLocale(locale);
         getResources().updateConfiguration(config, getResources().getDisplayMetrics());
+
+        // Update the drawer menu to reflect the new language
+        if (navigationView != null) {
+            updateNavigationViewMenu();
+        }
+    }
+
+    private void updateNavigationViewMenu() {
+        navigationView.getMenu().clear();  // Clear the current menu
+        navigationView.inflateMenu(R.menu.drawer_menu);  // Inflate the new menu to refresh titles
+        Menu menu = navigationView.getMenu();
+        menu.findItem(R.id.nav_favorites).setTitle(getString(R.string.nav_favorites));
+        menu.findItem(R.id.nav_settings).setTitle(getString(R.string.nav_settings));
     }
 
     @Override
